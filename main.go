@@ -1,20 +1,34 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"log"
+	"net"
+	"strings"
 )
 
-// TIP <p>To run your code, right-click the code and select <b>Run</b>.</p> <p>Alternatively, click
-// the <icon src="AllIcons.Actions.Execute"/> icon in the gutter and select the <b>Run</b> menu item from here.</p>
 func main() {
-	//TIP <p>Press <shortcut actionId="ShowIntentionActions"/> when your caret is at the underlined text
-	// to see how GoLand suggests fixing the warning.</p><p>Alternatively, if available, click the lightbulb to view possible fixes.</p>
-	s := "gopher"
-	fmt.Println("Hello and welcome, %s!", s)
+	conn, err := net.Dial("tcp", "irc.libera.chat:6667")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer conn.Close()
 
-	for i := 1; i <= 5; i++ {
-		//TIP <p>To start your debugging session, right-click your code in the editor and select the Debug option.</p> <p>We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
-		// for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.</p>
-		fmt.Println("i =", 100/i)
+	nick := "lpall"
+	user := "Liam Pallett"
+
+	fmt.Fprintf(conn, "NICK %s\r\n", nick)
+	fmt.Fprintf(conn, "USER %s 0 * :%s\r\n", nick, user)
+
+	scanner := bufio.NewScanner(conn)
+
+	for scanner.Scan() {
+		message := scanner.Text()
+		fmt.Println(message)
+
+		if strings.HasPrefix(message, "PING") {
+			fmt.Fprintf(conn, "%s\r\n", strings.Replace(message, "PING", "PONG", 1))
+		}
 	}
 }
