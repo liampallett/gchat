@@ -17,11 +17,13 @@ type Client struct {
 	port           int
 	conn           net.Conn
 	currentChannel string
+	ignored        map[string]bool
 	handlers       map[string]func(Message)
 }
 
 func NewClient(nick, user, server string, port int) *Client {
 	client := &Client{nick: nick, user: user, server: server, port: port}
+	client.ignored = map[string]bool{}
 	client.handlers = map[string]func(Message){
 		"PING":    client.handlePing,
 		"PRIVMSG": client.handlePrivmsg,
@@ -88,10 +90,12 @@ func (client *Client) run() {
 			if err != nil {
 				fmt.Println(err)
 			} else {
-				client.send(msg)
-				if msg.command == "PRIVMSG" {
-					echo := Message{client.nick, msg.command, msg.parameters}
-					client.handlePrivmsg(echo)
+				if msg.command != "" {
+					client.send(msg)
+					if msg.command == "PRIVMSG" {
+						echo := Message{client.nick, msg.command, msg.parameters}
+						client.handlePrivmsg(echo)
+					}
 				}
 			}
 		}
@@ -126,6 +130,12 @@ func (client *Client) parseInput(line string) (Message, error) {
 		return client.cmdPart(args)
 	case "me":
 		return client.cmdMe(args)
+	case "ignore":
+		return client.cmdIgnore(args)
+	case "unignore":
+		return client.cmdUnignore(args)
+	case "ignores":
+		return client.cmdIgnores(args)
 	default:
 		return Message{}, errors.New("unrecognised command")
 	}

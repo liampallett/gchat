@@ -11,6 +11,10 @@ func (client *Client) handlePing(msg Message) {
 }
 
 func (client *Client) handlePrivmsg(msg Message) {
+	if client.ignored[msg.Nick()] {
+		return
+	}
+
 	nick := msg.Nick()
 	text := msg.parameters[1]
 	if strings.HasPrefix(text, "\x01ACTION ") && strings.HasSuffix(text, "\x01") {
@@ -21,6 +25,10 @@ func (client *Client) handlePrivmsg(msg Message) {
 }
 
 func (client *Client) handleJoin(msg Message) {
+	if client.ignored[msg.Nick()] {
+		return
+	}
+
 	nick := msg.Nick()
 	text := msg.parameters[0]
 	if nick == client.nick {
@@ -31,6 +39,10 @@ func (client *Client) handleJoin(msg Message) {
 }
 
 func (client *Client) handlePart(msg Message) {
+	if client.ignored[msg.Nick()] {
+		return
+	}
+
 	nick := msg.Nick()
 	text := msg.parameters[0]
 	if nick == client.nick {
@@ -41,6 +53,10 @@ func (client *Client) handlePart(msg Message) {
 }
 
 func (client *Client) handleQuit(msg Message) {
+	if client.ignored[msg.Nick()] {
+		return
+	}
+
 	nick := msg.Nick()
 	if len(msg.parameters) < 1 {
 		if nick == client.nick {
