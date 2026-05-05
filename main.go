@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"crypto/tls"
 	"fmt"
 	"log"
 	"net"
@@ -71,22 +72,33 @@ func (msg Message) String() string {
 	return builder.String()
 }
 
-func main() {
-	conn, err := net.Dial("tcp", "irc.libera.chat:6667")
+type Client struct {
+	nick           string
+	user           string
+	conn           net.Conn
+	currentChannel string
+}
+
+func (client *Client) connect() {
+	var err error
+	client.conn, err = tls.Dial("tcp", "irc.libera.chat:6697", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer conn.Close()
+}
 
-	nick := Message{"", "NICK", []string{"lpall"}}
-	fmt.Fprintf(conn, "%s", nick)
+func (client *Client) register() {
+	nick := Message{"", "NICK", []string{client.nick}}
+	fmt.Fprintf(client.conn, "%s", nick)
 
-	user := Message{"", "USER", []string{"lpall", "0", "*", "Liam Pallett"}}
-	fmt.Fprintf(conn, "%s", user)
+	user := Message{"", "USER", []string{client.nick, "0", "*", client.user}}
+	fmt.Fprintf(client.conn, "%s", user)
+}
 
+func (client *Client) run() {
 	buffServer := make(chan string)
 	go func() {
-		scanner := bufio.NewScanner(conn)
+		scanner := bufio.NewScanner(client.conn)
 		for scanner.Scan() {
 			msg := scanner.Text()
 			buffServer <- msg
@@ -114,10 +126,29 @@ func main() {
 			switch msg.command {
 			case "PING":
 				pong := Message{"", "PONG", msg.parameters}
-				fmt.Fprintf(conn, "%s", pong)
+				fmt.Fprintf(client.conn, "%s", pong)
 			}
 		case line := <-buffClient:
-			fmt.Fprintf(conn, "%s\r\n", line)
+			if line[0] != '/' {
+				privmsg := Message{"", "PRIVMSG", []string{client.currentChannel, line}}
+				fmt.Fprintf(client.conn, "%s", privmsg)
+			} else {
+				rawCommand := line[1:strings.Index(line, " ")]
+				switch rawCommand {
+				case "join":
+					client.currentChannel = line[strings.Index(line, " ")+1:]
+					join := Message{"", "JOIN", []string{client.currentChannel}}
+					fmt.Fprintf(client.conn, "%s", join)
+				}
+			}
 		}
 	}
+}
+
+func main() {
+	client := Client{nick: "lpall", user: "Liam Pallett"}
+	client.connect()
+	defer client.conn.Close()
+	client.register()
+	client.run()
 }
