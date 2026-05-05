@@ -13,7 +13,11 @@ func (client *Client) handlePing(msg Message) {
 func (client *Client) handlePrivmsg(msg Message) {
 	nick := msg.Nick()
 	text := msg.parameters[1]
-	fmt.Printf("<%s> %s\n", nick, text)
+	if strings.HasPrefix(text, "\x01ACTION ") && strings.HasSuffix(text, "\x01") {
+		fmt.Printf("* %s %s\n", nick, text[8:len(text)-1])
+	} else {
+		fmt.Printf("<%s> %s\n", nick, text)
+	}
 }
 
 func (client *Client) handleJoin(msg Message) {

@@ -64,3 +64,14 @@ func (client *Client) cmdPart(args string) (Message, error) {
 
 	return Message{"", "PART", []string{channel, partMsg}}, nil
 }
+
+func (client *Client) cmdMe(args string) (Message, error) {
+	if args != "" {
+		if client.currentChannel == "" {
+			return Message{}, errors.New("you are not in a channel")
+		}
+		return Message{"", "PRIVMSG", []string{client.currentChannel, "\x01ACTION " + args + "\x01"}}, nil
+	}
+
+	return Message{}, errors.New("specify action")
+}

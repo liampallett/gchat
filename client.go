@@ -90,7 +90,8 @@ func (client *Client) run() {
 			} else {
 				client.send(msg)
 				if msg.command == "PRIVMSG" {
-					fmt.Printf("<%s> %s\n", client.nick, msg.parameters[1])
+					echo := Message{client.nick, msg.command, msg.parameters}
+					client.handlePrivmsg(echo)
 				}
 			}
 		}
@@ -123,6 +124,8 @@ func (client *Client) parseInput(line string) (Message, error) {
 		return client.cmdMsg(args)
 	case "part":
 		return client.cmdPart(args)
+	case "me":
+		return client.cmdMe(args)
 	default:
 		return Message{}, errors.New("unrecognised command")
 	}
