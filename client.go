@@ -17,6 +17,20 @@ type Client struct {
 	port           int
 	conn           net.Conn
 	currentChannel string
+	handlers       map[string]func(Message)
+}
+
+func NewClient(nick, user, server string, port int) *Client {
+	client := &Client{nick: nick, user: user, server: server, port: port}
+	client.handlers = map[string]func(Message){
+		"PING":    client.handlePing,
+		"PRIVMSG": client.handlePrivmsg,
+		"JOIN":    client.handleJoin,
+		"PART":    client.handlePart,
+		"QUIT":    client.handleQuit,
+		"NICK":    client.handleNick,
+	}
+	return client
 }
 
 func (client *Client) connect() error {
@@ -27,10 +41,14 @@ func (client *Client) connect() error {
 
 func (client *Client) register() {
 	nick := Message{"", "NICK", []string{client.nick}}
-	fmt.Fprintf(client.conn, "%s", nick)
+	client.send(nick)
 
 	user := Message{"", "USER", []string{client.nick, "0", "*", client.user}}
-	fmt.Fprintf(client.conn, "%s", user)
+	client.send(user)
+}
+
+func (client *Client) send(msg Message) {
+	fmt.Fprintf(client.conn, "%s", msg)
 }
 
 func (client *Client) run() {
@@ -60,48 +78,9 @@ func (client *Client) run() {
 				return
 			}
 			msg := parse(line)
-			switch msg.command {
-			case "PING":
-				pong := Message{"", "PONG", msg.parameters}
-				fmt.Fprintf(client.conn, "%s", pong)
-			case "PRIVMSG":
-				nick := msg.Nick()
-				text := msg.parameters[1]
-				fmt.Printf("<%s> %s\n", nick, text)
-			case "JOIN":
-				nick := msg.Nick()
-				text := msg.parameters[0]
-				if nick == client.nick {
-					fmt.Printf("you joined %s\n", text)
-				} else {
-					fmt.Printf("%s joined %s\n", nick, text)
-				}
-			case "PART":
-				nick := msg.Nick()
-				text := msg.parameters[0]
-				if nick == client.nick {
-					fmt.Printf("you left %s\n", text)
-				} else {
-					fmt.Printf("%s left %s\n", nick, text)
-				}
-			case "QUIT":
-				nick := msg.Nick()
-				if len(msg.parameters) < 1 {
-					if nick == client.nick {
-						fmt.Printf("you quit\n")
-					} else {
-						fmt.Printf("%s quit\n", nick)
-					}
-				} else {
-					text := msg.parameters[0]
-					quitReason := strings.TrimPrefix(text, "Quit: ")
-					if nick == client.nick {
-						fmt.Printf("you quit: %s\n", quitReason)
-					} else {
-						fmt.Printf("%s quit: %s\n", nick, quitReason)
-					}
-				}
-			default:
+			if handler, ok := client.handlers[msg.command]; ok {
+				handler(msg)
+			} else {
 				fmt.Println(line)
 			}
 		case line := <-buffClient:
@@ -109,7 +88,7 @@ func (client *Client) run() {
 			if err != nil {
 				fmt.Println(err)
 			} else {
-				fmt.Fprintf(client.conn, "%s", msg)
+				client.send(msg)
 				if msg.command == "PRIVMSG" {
 					fmt.Printf("<%s> %s\n", client.nick, msg.parameters[1])
 				}
@@ -119,48 +98,32 @@ func (client *Client) run() {
 }
 
 func (client *Client) parseInput(line string) (Message, error) {
-	var msg Message
-
 	if line[0] != '/' {
 		if client.currentChannel == "" {
 			return Message{}, errors.New("you are not in a channel")
 		}
-		msg = Message{"", "PRIVMSG", []string{client.currentChannel, line}}
-	} else {
-		lineParts := strings.SplitN(line[1:], " ", 2)
-		rawCommand := lineParts[0]
-		switch rawCommand {
-		case "join":
-			if len(lineParts) < 2 {
-				return Message{}, errors.New("specify channel to join")
-			}
-			client.currentChannel = lineParts[1]
-			msg = Message{"", "JOIN", []string{client.currentChannel}}
-		case "part":
-			if client.currentChannel == "" {
-				return Message{}, errors.New("trying to part from no channel")
-			}
-			msg = Message{"", "PART", []string{client.currentChannel}}
-			client.currentChannel = ""
-		case "quit":
-			if len(lineParts) > 1 {
-				msg = Message{"", "QUIT", []string{lineParts[1]}}
-			} else {
-				msg = Message{"", "QUIT", []string{}}
-			}
-		case "msg":
-			if len(lineParts) < 2 {
-				return Message{}, errors.New("need target nick and message")
-			}
-			messageParts := strings.SplitN(lineParts[1], " ", 2)
-			if len(messageParts) < 2 {
-				return Message{}, errors.New("need target nick and message")
-			}
-			msg = Message{"", "PRIVMSG", []string{messageParts[0], messageParts[1]}}
-		default:
-			return Message{}, errors.New("unrecognised command")
-		}
+		return Message{"", "PRIVMSG", []string{client.currentChannel, line}}, nil
 	}
 
-	return msg, nil
+	parts := strings.SplitN(line[1:], " ", 2)
+	command := parts[0]
+	args := ""
+	if len(parts) > 1 {
+		args = parts[1]
+	}
+
+	switch command {
+	case "quit":
+		return client.cmdQuit(args)
+	case "nick":
+		return client.cmdNick(args)
+	case "join":
+		return client.cmdJoin(args)
+	case "msg":
+		return client.cmdMsg(args)
+	case "part":
+		return client.cmdPart(args)
+	default:
+		return Message{}, errors.New("unrecognised command")
+	}
 }

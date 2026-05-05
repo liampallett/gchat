@@ -3,7 +3,7 @@ package main
 import "log"
 
 func main() {
-	client := Client{nick: "lpall", user: "Liam Pallett", server: "irc.libera.chat", port: 6697}
+	client := NewClient("lpall", "Liam Pallett", "irc.libera.chat", 6697)
 	if err := client.connect(); err != nil {
 		log.Fatal(err)
 	}
