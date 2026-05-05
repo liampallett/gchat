@@ -1,33 +1,33 @@
-# GlIRC
+# gchat
 
-Golang-IRC, AKA GlIRC, is a CLI-based IRC client written in Go.
+gchat is a CLI-based IRC client written in Go.
 
 ---
 
 # What the Project Is
 
-- What does this project do?
-- Who is it for?
-- What problem does it solve?
-- What makes it interesting or different?
+- Learning project for Go and IRC
 
 ---
 
 # How It Works
 
-- What are the main components of the system?
-- How do the pieces interact?
-- What is the core logic or architecture?
+- `type Message struct` for incoming and outgoing messages
+- parser/serializer for messages
+- `type Client struct` with handler maps for client and server message processing, goroutines and channels for I/O
 
 ---
 
 # Engineering Decisions
 
-For each non-obvious technical choice made in this project:
-- What decision was made?
-- What were the alternatives considered?
-- Why was this approach chosen over the alternatives?
-- What are the known limitations or tradeoffs of this choice?
+## `type Client struct`
+
+Took all code out of the main method and put it in `client.go` for separation of concerns and easier debugging.
+
+## `*_handlers.go`
+
+Parse input/output and call the appropriate method based on message command. Much easier to create, update and delete
+commands and their matching handlers.
 
 # Tech Stack
 
@@ -37,27 +37,52 @@ For each non-obvious technical choice made in this project:
 
 # What I Learned
 
-- What new skills did I gain?
-- What concepts became clearer through building this?
-- What surprised me during development?
+- IRC is really cool!
+- Go is very interesting, glad to have got the experience with it.
 
 ---
 
 # How to Run the Project
 
-- Prerequisites:
-- Installation steps:
-- How to start/run the project:
-- Example commands:
+Note: you will need a `config.json` file containing your nickname, username, server and port. Place this in the root
+directory after cloning the repository.
+
+```
+{
+    "nick": "yournick",
+    "user": "Your Name",
+    "server": "irc.libera.chat",
+    "port": 6697
+}
+```
+
+```
+git clone https://github.com/liampallett/gchat.git 
+cd gchat
+go build
+./gchat
+```
 
 ---
 
 # Project Structure
 
+```
+├── LICENSE.md
+├── README.md
+├── client.go
+├── client_handlers.go
+├── config.go
+├── go.mod
+├── main.go
+├── message.go
+├── parser_test.go
+└── server_handlers.go
+```
+
 # Future Improvements
 
-- What features would I add next?
-- What parts could be improved or refactored?
-- What ideas did I not have time to implement?
+- TUI integration with an existing library.
+- More supported commands.
 
 ---
