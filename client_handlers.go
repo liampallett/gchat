@@ -92,7 +92,7 @@ func (client *Client) cmdIgnores(args string) (Message, error) {
 			client.print("%s\n", nick)
 		}
 		return Message{}, nil
-	} else {
-		return Message{}, errors.New("no ignored users")
 	}
+
+	return Message{}, errors.New("no ignored users")
 }
