@@ -83,6 +83,7 @@ func (client *Client) cmdNick(args string) (Message, error) {
 func (client *Client) cmdJoin(args string) (Message, error) {
 	if args != "" {
 		client.currentChannel = args
+		client.ui.Chat.SetTitle(client.currentChannel)
 		client.ui.Chat.Clear()
 		return Message{"", "JOIN", []string{client.currentChannel}}, nil
 	}
@@ -118,6 +119,7 @@ func (client *Client) cmdPart(args string) (Message, error) {
 	}
 	if channel == client.currentChannel {
 		client.currentChannel = ""
+		client.ui.Chat.SetTitle(client.currentChannel)
 	}
 	client.ui.Chat.Clear()
 	return Message{"", "PART", []string{channel, partMsg}}, nil
