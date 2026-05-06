@@ -32,6 +32,7 @@ func (client *Client) handleJoin(msg Message) {
 	text := msg.parameters[0]
 	if nick == client.nick {
 		client.print("you joined %s\n", text)
+		client.ui.Channels.AddItem(text, "", 0, nil)
 	} else {
 		client.print("%s joined %s\n", nick, text)
 	}
@@ -46,6 +47,10 @@ func (client *Client) handlePart(msg Message) {
 	text := msg.parameters[0]
 	if nick == client.nick {
 		client.print("you left %s\n", text)
+		indices := client.ui.Channels.FindItems(text, "", false, true)
+		if len(indices) > 0 {
+			client.ui.Channels.RemoveItem(indices[0])
+		}
 	} else {
 		client.print("%s left %s\n", nick, text)
 	}
