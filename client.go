@@ -10,20 +10,26 @@ import (
 )
 
 type Client struct {
-	nick           string
-	user           string
-	server         string
-	port           int
-	conn           net.Conn
-	currentChannel string
-	ignored        map[string]bool
-	handlers       map[string]func(Message)
-	ui             UI
+	nick   string
+	user   string
+	server string
+	port   int
+	conn   net.Conn
+
+	currentChannel  string
+	currentChannels []string
+	channelMembers  map[string][]string
+
+	ignored  map[string]bool
+	handlers map[string]func(Message)
+
+	ui UI
 }
 
 func NewClient(nick, user, server string, port int, ui UI) *Client {
 	client := &Client{nick: nick, user: user, server: server, port: port, ui: ui}
 	client.ignored = map[string]bool{}
+	client.channelMembers = map[string][]string{}
 	client.handlers = map[string]func(Message){
 		"PING":    client.handlePing,
 		"PRIVMSG": client.handlePrivmsg,
@@ -31,6 +37,7 @@ func NewClient(nick, user, server string, port int, ui UI) *Client {
 		"PART":    client.handlePart,
 		"QUIT":    client.handleQuit,
 		"NICK":    client.handleNick,
+		"353":     client.handleNames,
 	}
 	return client
 }
@@ -83,6 +90,13 @@ func (client *Client) readLoop() {
 				client.print("%s\n", line)
 			}
 		})
+	}
+}
+
+func (client *Client) refreshNames() {
+	client.ui.Members.Clear()
+	for _, name := range client.channelMembers[client.currentChannel] {
+		client.ui.Members.AddItem(name, "", 0, nil)
 	}
 }
 

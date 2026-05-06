@@ -1,8 +1,18 @@
 package main
 
 import (
+	"slices"
 	"strings"
 )
+
+func (client *Client) handleNames(msg Message) {
+	channel := msg.parameters[2]
+	members := strings.Fields(msg.parameters[len(msg.parameters)-1])
+	for _, element := range members {
+		client.channelMembers[channel] = append(client.channelMembers[channel], element)
+	}
+	client.refreshNames()
+}
 
 func (client *Client) handlePing(msg Message) {
 	pong := Message{"", "PONG", msg.parameters}
@@ -32,13 +42,16 @@ func (client *Client) handleJoin(msg Message) {
 	}
 
 	nick := msg.Nick()
-	text := msg.parameters[0]
+	channel := msg.parameters[0]
 	if nick == client.nick {
-		client.print("you joined %s\n", text)
-		client.ui.Channels.AddItem(text, "", 0, nil)
+		client.print("you joined %s\n", channel)
+		client.ui.Channels.AddItem(channel, "", 0, nil)
+		client.channelMembers[channel] = nil
 	} else {
-		client.print("%s joined %s\n", nick, text)
+		client.print("%s joined %s\n", nick, channel)
+		client.channelMembers[channel] = append(client.channelMembers[channel], nick)
 	}
+	client.refreshNames()
 }
 
 func (client *Client) handlePart(msg Message) {
@@ -47,16 +60,20 @@ func (client *Client) handlePart(msg Message) {
 	}
 
 	nick := msg.Nick()
-	text := msg.parameters[0]
+	channel := msg.parameters[0]
 	if nick == client.nick {
-		client.print("you left %s\n", text)
-		indices := client.ui.Channels.FindItems(text, "", false, true)
+		client.print("you left %s\n", channel)
+		indices := client.ui.Channels.FindItems(channel, "", false, true)
 		if len(indices) > 0 {
 			client.ui.Channels.RemoveItem(indices[0])
 		}
 	} else {
-		client.print("%s left %s\n", nick, text)
+		client.print("%s left %s\n", nick, channel)
+		client.channelMembers[channel] = slices.DeleteFunc(client.channelMembers[channel], func(s string) bool {
+			return s == nick
+		})
 	}
+	client.refreshNames()
 }
 
 func (client *Client) handleQuit(msg Message) {
@@ -78,8 +95,14 @@ func (client *Client) handleQuit(msg Message) {
 			client.print("you quit: %s\n", quitReason)
 		} else {
 			client.print("%s quit: %s\n", nick, quitReason)
+			for channel := range client.channelMembers {
+				client.channelMembers[channel] = slices.DeleteFunc(client.channelMembers[channel], func(s string) bool {
+					return s == nick
+				})
+			}
 		}
 	}
+	client.refreshNames()
 }
 
 func (client *Client) handleNick(msg Message) {
