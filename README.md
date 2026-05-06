@@ -78,12 +78,13 @@ go build
 ├── main.go
 ├── message.go
 ├── parser_test.go
-└── server_handlers.go
+├── server_handlers.go
+└── ui.go
 ```
 
 # Future Improvements
 
-- TUI integration with an existing library.
+- Expand TUI
 - More supported commands.
 
 ---

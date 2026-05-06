@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 )
 
@@ -90,7 +89,7 @@ func (client *Client) cmdUnignore(args string) (Message, error) {
 func (client *Client) cmdIgnores(args string) (Message, error) {
 	if len(client.ignored) > 0 {
 		for nick := range client.ignored {
-			fmt.Printf("%s\n", nick)
+			client.print("%s\n", nick)
 		}
 		return Message{}, nil
 	} else {

@@ -6,7 +6,10 @@ import (
 
 func (client *Client) handlePing(msg Message) {
 	pong := Message{"", "PONG", msg.parameters}
-	client.send(pong)
+	err := client.send(pong)
+	if err != nil {
+		client.print("%s\n", err)
+	}
 }
 
 func (client *Client) handlePrivmsg(msg Message) {

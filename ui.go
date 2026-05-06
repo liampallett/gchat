@@ -23,7 +23,7 @@ func initUI() UI {
 	chat.SetTitle("Chat")
 	chat.SetBorder(true)
 	chat.SetScrollable(true)
-	chat.SetChangedFunc(func() { app.Draw() })
+	chat.SetChangedFunc(func() { app.QueueUpdateDraw(func() {}) })
 	chat.SetWordWrap(true)
 
 	members := tview.NewList()

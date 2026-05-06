@@ -76,16 +76,21 @@ func (client *Client) readLoop() {
 			client.print("parse error: %s\n", err)
 			continue
 		}
-		if handler, ok := client.handlers[msg.command]; ok {
-			handler(msg)
-		} else {
-			client.print("%s\n", line)
-		}
-		client.ui.App.QueueUpdateDraw(func() {})
+		client.ui.App.QueueUpdateDraw(func() {
+			if handler, ok := client.handlers[msg.command]; ok {
+				handler(msg)
+			} else {
+				client.print("%s\n", line)
+			}
+		})
 	}
 }
 
 func (client *Client) parseInput(line string) (Message, error) {
+	if line == "" {
+		return Message{}, errors.New("parsing an empty string")
+	}
+
 	if line[0] != '/' {
 		if client.currentChannel == "" {
 			return Message{}, errors.New("you are not in a channel")
