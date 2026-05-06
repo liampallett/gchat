@@ -10,6 +10,9 @@ func (client *Client) handleMOTDStart(msg Message) {
 }
 
 func (client *Client) handleMOTD(msg Message) {
+	if len(msg.parameters[1]) < 2 {
+		return
+	}
 	client.print("%s\t\n", msg.parameters[1][2:])
 }
 
@@ -85,6 +88,7 @@ func (client *Client) handleJoin(msg Message) {
 	channel := msg.parameters[0]
 	if nick == client.nick {
 		client.print("you joined %s\n", channel)
+		client.currentChannels = append(client.currentChannels, channel)
 		client.ui.Channels.AddItem(channel, "", 0, nil)
 		client.channelMembers[channel] = nil
 	} else {
@@ -103,6 +107,10 @@ func (client *Client) handlePart(msg Message) {
 	channel := msg.parameters[0]
 	if nick == client.nick {
 		client.print("you left %s\n", channel)
+		client.currentChannels = slices.DeleteFunc(client.currentChannels, func(s string) bool {
+			return s == channel
+		})
+		delete(client.channelMembers, channel)
 		indices := client.ui.Channels.FindItems(channel, "", false, true)
 		if len(indices) > 0 {
 			client.ui.Channels.RemoveItem(indices[0])

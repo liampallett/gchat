@@ -99,6 +99,7 @@ func (client *Client) readLoop() {
 			}
 		})
 	}
+	client.print("connection lost\n")
 }
 
 func (client *Client) refreshNames() {

@@ -13,7 +13,7 @@ type Message struct {
 
 func parse(line string) (Message, error) {
 	if line == "" {
-		return Message{}, errors.New("attemped to parse an empty line")
+		return Message{}, errors.New("attempted to parse an empty line")
 	}
 
 	var prefix string

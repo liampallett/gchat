@@ -36,7 +36,7 @@ func main() {
 				return
 			}
 			if err != nil {
-				log.Fatal(err)
+				return
 			}
 			if msg.command == "PRIVMSG" {
 				echo := Message{client.nick, msg.command, msg.parameters}

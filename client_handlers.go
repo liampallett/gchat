@@ -23,6 +23,9 @@ func (client *Client) cmdHelp(args string) (Message, error) {
 
 	if args != "" {
 		cmd := args
+		if cmds[cmd] == nil {
+			return Message{}, errors.New("unknown command")
+		}
 		cmdDesc := cmds[cmd][0]
 		cmdArgs := cmds[cmd][1]
 		if cmdArgs != "" {
