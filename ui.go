@@ -39,9 +39,9 @@ func initUI() UI {
 		AddItem(input, 3, 0, true)
 
 	layout := tview.NewFlex().
-		AddItem(channels, 20, 0, false).
+		AddItem(channels, 30, 0, false).
 		AddItem(center, 0, 1, true).
-		AddItem(members, 20, 0, false)
+		AddItem(members, 30, 0, false)
 
 	app.SetRoot(layout, true).SetFocus(input)
 	return UI{app, channels, chat, members, input}

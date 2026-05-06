@@ -38,6 +38,10 @@ func main() {
 				echo := Message{client.nick, msg.command, msg.parameters}
 				client.handlePrivmsg(echo)
 			}
+			if msg.command == "QUIT" {
+				client.ui.App.Stop()
+				return
+			}
 		}
 	})
 
