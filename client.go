@@ -17,8 +17,9 @@ type Client struct {
 	conn   net.Conn
 
 	currentChannel  string
-	currentChannels []string
 	channelMembers  map[string][]string
+	currentChannels []string
+	chatHistory     map[string]string
 
 	ignored  map[string]bool
 	handlers map[string]func(Message)
@@ -30,6 +31,7 @@ func NewClient(nick, user, server string, port int, ui UI) *Client {
 	client := &Client{nick: nick, user: user, server: server, port: port, ui: ui}
 	client.ignored = map[string]bool{}
 	client.channelMembers = map[string][]string{}
+	client.chatHistory = map[string]string{}
 	client.handlers = map[string]func(Message){
 		"NOTICE":  client.handleNotice,
 		"PING":    client.handlePing,
@@ -79,6 +81,14 @@ func (client *Client) send(msg Message) error {
 
 func (client *Client) print(format string, args ...any) {
 	fmt.Fprintf(client.ui.Chat, format, args...)
+}
+
+func (client *Client) printChannel(channel string, format string, args ...any) {
+	text := fmt.Sprintf(format, args...)
+	client.chatHistory[channel] += text
+	if channel == client.currentChannel {
+		client.print(format, args)
+	}
 }
 
 func (client *Client) readLoop() {

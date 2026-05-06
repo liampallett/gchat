@@ -71,11 +71,12 @@ func (client *Client) handlePrivmsg(msg Message) {
 	}
 
 	nick := msg.Nick()
+	channel := msg.parameters[0]
 	text := msg.parameters[1]
 	if strings.HasPrefix(text, "\x01ACTION ") && strings.HasSuffix(text, "\x01") {
-		client.print("* %s %s\n", nick, text[8:len(text)-1])
+		client.printChannel(channel, "* %s %s\n", nick, text[8:len(text)-1])
 	} else {
-		client.print("<%s> %s\n", nick, text)
+		client.printChannel(channel, "<%s> %s\n", nick, text)
 	}
 }
 
@@ -92,7 +93,7 @@ func (client *Client) handleJoin(msg Message) {
 		client.ui.Channels.AddItem(channel, "", 0, nil)
 		client.channelMembers[channel] = nil
 	} else {
-		client.print("%s joined %s\n", nick, channel)
+		client.printChannel(channel, "%s joined %s\n", nick, channel)
 		client.channelMembers[channel] = append(client.channelMembers[channel], nick)
 	}
 	client.refreshNames()
@@ -116,7 +117,7 @@ func (client *Client) handlePart(msg Message) {
 			client.ui.Channels.RemoveItem(indices[0])
 		}
 	} else {
-		client.print("%s left %s\n", nick, channel)
+		client.printChannel(channel, "%s left %s\n", nick, channel)
 		client.channelMembers[channel] = slices.DeleteFunc(client.channelMembers[channel], func(s string) bool {
 			return s == nick
 		})
@@ -134,15 +135,15 @@ func (client *Client) handleQuit(msg Message) {
 		if nick == client.nick {
 			client.print("you quit\n")
 		} else {
-			client.print("%s quit\n", nick)
+			client.printChannel(client.currentChannel, "%s quit\n", nick)
 		}
 	} else {
 		text := msg.parameters[0]
 		quitReason := strings.TrimPrefix(text, "Quit: ")
 		if nick == client.nick {
-			client.print("you quit: %s\n", quitReason)
+			client.printChannel(client.currentChannel, "you quit: %s\n", quitReason)
 		} else {
-			client.print("%s quit: %s\n", nick, quitReason)
+			client.printChannel(client.currentChannel, "%s quit: %s\n", nick, quitReason)
 			for channel := range client.channelMembers {
 				client.channelMembers[channel] = slices.DeleteFunc(client.channelMembers[channel], func(s string) bool {
 					return s == nick
@@ -161,6 +162,6 @@ func (client *Client) handleNick(msg Message) {
 	} else {
 		oldNick := msg.Nick()
 		newNick := msg.parameters[0]
-		client.print("%s is now known as %s\n", oldNick, newNick)
+		client.printChannel(client.currentChannel, "%s is now known as %s\n", oldNick, newNick)
 	}
 }

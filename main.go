@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
 
@@ -15,6 +16,26 @@ func main() {
 	ui := initUI()
 	client := NewClient(config.Nick, config.User, config.Server, config.Port, ui)
 
+	client.ui.Channels.SetSelectedFunc(func(index int, mainText string, secondaryText string, shortcut rune) {
+		client.currentChannel = mainText
+		client.ui.Chat.SetTitle(mainText)
+		client.refreshNames()
+		client.ui.Chat.Clear()
+		fmt.Fprintf(client.ui.Chat, client.chatHistory[mainText])
+		client.ui.App.SetFocus(client.ui.Input)
+	})
+
+	client.ui.App.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyTab {
+			if client.ui.App.GetFocus() == client.ui.Input {
+				client.ui.App.SetFocus(client.ui.Channels)
+			} else {
+				client.ui.App.SetFocus(client.ui.Input)
+			}
+			return nil
+		}
+		return event
+	})
 	client.ui.Input.SetDoneFunc(func(key tcell.Key) {
 		if key != tcell.KeyEnter {
 			return
