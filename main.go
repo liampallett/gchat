@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -21,7 +22,7 @@ func main() {
 		client.ui.Chat.SetTitle(mainText)
 		client.refreshNames()
 		client.ui.Chat.Clear()
-		fmt.Fprintf(client.ui.Chat, client.chatHistory[mainText])
+		fmt.Fprint(client.ui.Chat, strings.Join(client.channels[mainText].history, ""))
 		client.ui.App.SetFocus(client.ui.Input)
 	})
 
@@ -51,7 +52,7 @@ func main() {
 			return
 		}
 		if msg.command != "" {
-			err = client.send(msg)
+			err = client.server.send(msg)
 			if msg.command == "QUIT" {
 				client.ui.App.Stop()
 				return
@@ -66,7 +67,7 @@ func main() {
 		}
 	})
 
-	if err = client.connect(); err != nil {
+	if err = client.server.connect(); err != nil {
 		log.Fatal(err)
 	}
 	defer func(conn net.Conn) {
@@ -74,12 +75,12 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-	}(client.conn)
+	}(client.server.conn)
 	if err = client.register(); err != nil {
 		log.Fatal(err)
 	}
 
-	go client.readLoop()
+	go client.server.readLoop()
 	if err = ui.App.Run(); err != nil {
 		log.Fatal(err)
 	}

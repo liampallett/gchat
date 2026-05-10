@@ -1,25 +1,18 @@
 package main
 
 import (
-	"bufio"
-	"crypto/tls"
 	"errors"
 	"fmt"
-	"net"
 	"strings"
 )
 
 type Client struct {
 	nick   string
 	user   string
-	server string
-	port   int
-	conn   net.Conn
+	server *Server
 
-	currentChannel  string
-	channelMembers  map[string][]string
-	currentChannels []string
-	chatHistory     map[string]string
+	currentChannel string
+	channels       map[string]*Channel
 
 	ignored  map[string]bool
 	handlers map[string]func(Message)
@@ -27,11 +20,24 @@ type Client struct {
 	ui UI
 }
 
-func NewClient(nick, user, server string, port int, ui UI) *Client {
-	client := &Client{nick: nick, user: user, server: server, port: port, ui: ui}
+func NewClient(nick, user, address string, port int, ui UI) *Client {
+	server := &Server{address: address, port: port, incoming: make(chan Message)}
+	client := &Client{nick: nick, user: user, server: server}
+
+	go func() {
+		for msg := range client.server.incoming {
+			client.ui.App.QueueUpdateDraw(func() {
+				if handler, ok := client.handlers[msg.command]; ok {
+					handler(msg)
+				} else {
+					client.print("%s\n", msg)
+				}
+			})
+		}
+	}()
+
+	client.channels = map[string]*Channel{}
 	client.ignored = map[string]bool{}
-	client.channelMembers = map[string][]string{}
-	client.chatHistory = map[string]string{}
 	client.handlers = map[string]func(Message){
 		"NOTICE":  client.handleNotice,
 		"PING":    client.handlePing,
@@ -52,31 +58,20 @@ func NewClient(nick, user, server string, port int, ui UI) *Client {
 	return client
 }
 
-func (client *Client) connect() error {
-	var err error
-	client.conn, err = tls.Dial("tcp", fmt.Sprintf("%s:%d", client.server, client.port), nil)
-	return err
-}
-
 func (client *Client) register() error {
 	nick := Message{"", "NICK", []string{client.nick}}
-	err := client.send(nick)
+	err := client.server.send(nick)
 	if err != nil {
 		return err
 	}
 
 	user := Message{"", "USER", []string{client.nick, "0", "*", client.user}}
-	err = client.send(user)
+	err = client.server.send(user)
 	if err != nil {
 		return err
 	}
 
 	return nil
-}
-
-func (client *Client) send(msg Message) error {
-	_, err := fmt.Fprintf(client.conn, "%s", msg)
-	return err
 }
 
 func (client *Client) print(format string, args ...any) {
@@ -85,39 +80,18 @@ func (client *Client) print(format string, args ...any) {
 
 func (client *Client) printChannel(channel string, format string, args ...any) {
 	text := fmt.Sprintf(format, args...)
-	client.chatHistory[channel] += text
+	client.channels[channel].history = append(client.channels[channel].history, text)
 	if channel == client.currentChannel {
-		client.print(format, args)
+		fmt.Fprintf(client.ui.Chat, text)
 	}
-}
-
-func (client *Client) readLoop() {
-	scanner := bufio.NewScanner(client.conn)
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		msg, err := parse(line)
-		if err != nil {
-			client.print("parse error: %s\n", err)
-			continue
-		}
-		client.ui.App.QueueUpdateDraw(func() {
-			if handler, ok := client.handlers[msg.command]; ok {
-				handler(msg)
-			} else {
-				client.print("%s\n", line)
-			}
-		})
-	}
-	client.print("connection lost\n")
 }
 
 func (client *Client) refreshNames() {
 	client.ui.Members.Clear()
-	for _, name := range client.channelMembers[client.currentChannel] {
+	for _, name := range client.channels[client.currentChannel].members {
 		client.ui.Members.AddItem(name, "", 0, nil)
 	}
-	memberCount := len(client.channelMembers[client.currentChannel])
+	memberCount := len(client.channels[client.currentChannel].members)
 	if memberCount < 1 {
 		client.ui.Members.SetTitle("Members")
 	} else {

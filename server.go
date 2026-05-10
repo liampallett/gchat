@@ -1,0 +1,39 @@
+package main
+
+import (
+	"bufio"
+	"crypto/tls"
+	"fmt"
+	"net"
+)
+
+type Server struct {
+	address  string
+	port     int
+	conn     net.Conn
+	incoming chan Message
+}
+
+func (server *Server) connect() error {
+	conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", server.address, server.port), nil)
+	server.conn = conn
+	return err
+}
+
+func (server *Server) send(msg Message) error {
+	_, err := fmt.Fprintf(server.conn, "%s", msg)
+	return err
+}
+
+func (server *Server) readLoop() {
+	scanner := bufio.NewScanner(server.conn)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+		msg, err := parse(line)
+		if err != nil {
+			continue
+		}
+		server.incoming <- msg
+	}
+}
